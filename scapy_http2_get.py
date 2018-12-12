@@ -7,7 +7,10 @@ import struct
 from scapy.all import *
 from scapy.contrib.http2 import *
 
-# Dumb (and incomplete) connection function
+H2_H_LEN_FIELD_SIZE = 3
+H2_H_SIZE = 9
+
+# Simple connection function
 def connect(dst, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     rv = sock.connect_ex((dst, port))
@@ -41,8 +44,10 @@ accept: */*
     # Create a settings frame and set (in order): max concurrent streams,
     # initial window size and disable push
     stg_frm=H2Frame()/H2SettingsFrame()
-    stg_frm['H2SettingsFrame'].settings += [H2Setting(id=0x3, value=100),
-            H2Setting(id=0x4, value=1073741824), H2Setting(id=0x2, value=0)]
+    stg_frm['H2SettingsFrame'].settings += [
+            H2Setting(id=H2Setting.SETTINGS_MAX_CONCURRENT_STREAMS, value=100),
+            H2Setting(id=H2Setting.SETTINGS_INITIAL_WINDOW_SIZE, value=1073741824), 
+            H2Setting(id=H2Setting.SETTINGS_ENABLE_PUSH, value=0)]
 
     # Create a window update and set window size
     winupd_frm=H2Frame()/H2WindowUpdateFrame(scapy.utils.binascii.unhexlify('3fff0001'))
@@ -66,13 +71,13 @@ accept: */*
     fSeq = H2Seq()
     while True:
         # Fetch just the size (3 bytes field)
-        raw_pkg = bytearray(sock.recv(0x3))
+        raw_pkg = bytearray(sock.recv(H2_H_LEN_FIELD_SIZE))
 
         frm_len = conv_barray_to_len(raw_pkg) # little hack here since struct
                                               # can't handle 3-bytes field
 
         # Read entire frame including 9-bytes header 3 were already read)
-        frm_len += 9
+        frm_len += H2_H_SIZE
         while len(raw_pkg) < frm_len:
             raw_pkg.extend(sock.recv(frm_len - len(raw_pkg)))
 
