@@ -25,17 +25,18 @@ def conv_barray_to_len(barray):
 
     return (msb << 2) | lsh
 
-def fetch_http2_page(sock):
+def fetch_http2_page(sock, dst):
 
     # Request info in text form. This will be converted to binary
     # form before being sent to server.
-    txt_req =  b''':method GET
+    txt_req =  b'''\
+:method GET
 :path /
 :scheme http
-:authority www.uol.com.br
+:authority %s
 user-agent: curl/7.61.1
 accept: */*
-'''
+''' % dst
 
     # This is the most famous http2 magic number
     MAGIC='PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n'
@@ -46,7 +47,7 @@ accept: */*
     stg_frm=H2Frame()/H2SettingsFrame()
     stg_frm['H2SettingsFrame'].settings += [
             H2Setting(id=H2Setting.SETTINGS_MAX_CONCURRENT_STREAMS, value=100),
-            H2Setting(id=H2Setting.SETTINGS_INITIAL_WINDOW_SIZE, value=1073741824), 
+            H2Setting(id=H2Setting.SETTINGS_INITIAL_WINDOW_SIZE, value=1073741824),
             H2Setting(id=H2Setting.SETTINGS_ENABLE_PUSH, value=0)]
 
     # Create a window update and set window size
@@ -100,7 +101,7 @@ if "__main__" == __name__:
     port = 80
 
     sock = connect(dst, port)
-    seq = fetch_http2_page(sock)
+    seq = fetch_http2_page(sock, dst)
 
     seq.display()
 
